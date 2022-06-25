@@ -1,6 +1,8 @@
 # cpp-ap-filter-tools
 - Created by and copywrited by me
 - This code is made availiable under the GPLv3 license here: www.gnu.org/licenses/gpl-3.0.en.html
+## Warning, not fully tested, use at your own risk
+- These functions seem correct but have not been sufficiently tested
 ## List of functions
 - lp2lp - lowpass to lowpass
 - lp2hp - lowpass to highpass
