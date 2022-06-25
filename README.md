@@ -38,9 +38,13 @@ This code is made availiable under the GPLv3 license here: www.gnu.org/licenses/
 ### lp2lp works as a general frequency scaler
 ### FastBilin and FastBPF are fast
 	The bilin and lp2bpf located in these classes are about 9-10x faster than the ones located outside of their classes for repeat transforms of the same N
+	
 	These classes are fast because they cache results of previous transforms
+	
 	By default, the cache will erase once more than 10 transforms are stored
+	
 		This is to prevent memory leaks, but there is certainly a better way to do this
+	
 ### The poly_exp function is very bad
 	There are probably some very fast algorithms to calculate a polynomial raised to a power, 
 	but with the FastBilin and FastBPF classes there is little motivation to implement a faster algorithm
