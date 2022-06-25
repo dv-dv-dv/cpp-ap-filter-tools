@@ -51,7 +51,7 @@ These functions have not been properly tested yet, but I think they might work
 #include <vector>
 #include <unordered_map>
 #include <ctgmath>
-namespace filtd {
+namespace filt {
 	// multiply two polynomials
 	template <typename T>
 	std::vector<T> poly_mult(const std::vector<T>& poly1, const std::vector<T>& poly2) {
@@ -65,8 +65,10 @@ namespace filtd {
 		}
 		return c;
 	}
-	// only for integer powers >= 0
-	// this function is very inefficient and has a lot of room for improvement
+	/* 
+	only for integer powers >= 0
+	this function is very inefficient and has a lot of room for improvement
+	*/
 	template <typename T>
 	std::vector<T> poly_exp(const std::vector<T>& poly, int pow) {
 		int a_max = poly.size();
@@ -82,8 +84,10 @@ namespace filtd {
 		}
 		return poly_raised;
 	}
-	// if a vector vec = { 1 } and length = 5 is given
-	// return {0, 0, 0, 0, 1}
+	/*
+	if a vector vec = {1} and length = 5 is given
+	return {0, 0, 0, 0, 1}
+	*/
 	template <typename T>
 	std::vector<T> pad_vec(const std::vector<T>& vec, int length) {
 		if (vec.size() == length) {
@@ -96,7 +100,9 @@ namespace filtd {
 		}
 		return vec_padded;
 	}
-	// container for a standard filter in a b form
+	/*
+	container for a standard filter in a b form
+	*/
 	template <typename T>
 	class filtab {
 	public:
@@ -113,9 +119,11 @@ namespace filtd {
 		const int getN() const {
 			return this->a.size() - 1;
 		}
-		// resize the a and b vectors to accomodate a filter of order N
-		// return 1 if the vectors were resized
-		// return 0 if the vectors were not resized
+		/*
+		resize the a and b vectors to accomodate a filter of order N
+		return 1 if the vectors were resized
+		return 0 if the vectors were not resized
+		*/
 		int resize(int N) {
 			if (this->getN() == N) {
 				return 0;
@@ -130,35 +138,40 @@ namespace filtd {
 				return 1;
 			}
 		}
-		// divide all coefficients by a[0]
+		/*
+		divide all coefficients by a[0]
+		*/
 		filtab<T>& normalize() {
-			for (auto i = 0; i < a.size(); i++) {
-				this->a[i] /= this->a[0];
-				this->b[i] /= this->a[0];
+			T k = this->a[0];
+			for (auto i = 0; i < this->a.size(); i++) {
+				this->a[i] /= k;
+				this->b[i] /= k;
 			}
 			return *this;
 		}
 		void print() {
 			using namespace std;
-			cout << "a: ";
-			for (auto i = 0; i < a.size(); i++) {
-				cout << a[i];
-				if (i < a.size() - 1) {
-					cout << ", ";
-				}
-			}
-			cout << endl << "b: ";
+			cout << "b: ";
 			for (auto i = 0; i < b.size(); i++) {
 				cout << b[i];
 				if (i < b.size() - 1) {
 					cout << ", ";
 				}
 			}
-			cout << endl;
+			cout << endl << "a: ";
+			for (auto i = 0; i < a.size(); i++) {
+				cout << a[i];
+				if (i < a.size() - 1) {
+					cout << ", ";
+				}
+			}
+
+			cout << endl << endl;
 		}
 	};
-	// transforms an analog lpf with a cutoff of 1 rad/s
-	// to a lpf with a cutoff of wo rad/s
+	/* 
+	transforms an analog lpf with a cutoff of 1 rad/s to a lpf with a cutoff of wo rad/s
+	*/
 	template <typename T>
 	filtab<T> lp2lp(const filtab<T>& lpap, T wo) {
 		filtab<T> lp;
@@ -177,8 +190,9 @@ namespace filtd {
 		lp.normalize();
 		return lp;
 	}
-	// transforms an analog lpf with a cutoff of 1 rad/s
-	// to a hpf with a cutoff of wo rad/s
+	/* 
+	transforms an analog lpf with a cutoff of 1 rad/s to a hpf with a cutoff of wo rad/s
+	*/
 	template <typename T>
 	filtab<T> lp2hp(const filtab<T>& lpap, T wo) {
 		filtab<T> hp;
@@ -190,15 +204,16 @@ namespace filtd {
 		hp.resize(N);
 		T k = 0;
 		for (auto i = 0; i < N + 1; i++) {
-			k = pow(wo, i - N);
-			hp.a[i] = k * lpap.a[N - i];
-			hp.b[i] = k * lpap.b[N - i];
+			k = pow(wo, -i);
+			hp.a[N - i] = k * lpap.a[i];
+			hp.b[N - i] = k * lpap.b[i];
 		}
 		hp.normalize();
 		return hp;
 	}
-	// transforms an analog lpf with a cutoff of 1 rad/s
-	// to a bpf with a geometric center of wo rad/s and quality factor Q
+	/* 
+	transforms an analog lpf with a cutoff of 1 rad/s to a bpf with a geometric center of wo rad/s and quality factor Q
+	*/
 	template <typename T>
 	filtab<T> lp2bp(const filtab<T>& lpap, T wo, T Q) {
 		filtab<T> bp;
@@ -219,14 +234,17 @@ namespace filtd {
 		bp.normalize();
 		return bp;
 	}
-	// Warps an analog filter's frequency such that an analog filter with cutoff frequency bt_freq_warp(wo, fs)
-	// will produce a digital filter with cutoff wo when a bilinear transform is performed with a sampling frequency of fs.
+	/* 
+	Warps an analog filter's frequency such that an analog filter with cutoff frequency bt_freq_warp(wo, fs) will produce a digital filter with cutoff wo when a bilinear transform is performed with a sampling frequency of fs.
+	*/
 	template <typename T>
 	T bt_freq_warp(T wo, T fs) {
 		const T pi = 3.14159265358979323846;
 		return 2 * fs * tan(pi * wo / fs);
 	}
-	// converts an analog filter to a digital filter
+	/*
+	converts an analog filter to a digital filter
+	*/
 	template <typename T>
 	filtab<T> bilin(const filtab<T>& analog, T fs) {
 		filtab<T> digital;
@@ -250,10 +268,12 @@ namespace filtd {
 		return digital;
 	}
 	
-	// A class that has a member function that computes bilinear transforms. 
-	// This class caches data from previous transforms to make repeated transforms of the same order more efficient. 
-	// A max number of cached transforms can be set and if that number is reached the cache is erased. 
-	// A better system should be implemented but this should prevent memory leaks.
+	/* 
+	A class that has a member function that computes bilinear transforms. 
+	This class caches data from previous transforms to make repeated transforms of the same order more efficient. 
+	A max number of cached transforms can be set and if that number is reached the cache is erased. 
+	A better system should be implemented but this should prevent memory leaks. 
+	*/
 	template <typename T>
 	class FastBilin {
 	private:
@@ -263,10 +283,12 @@ namespace filtd {
 		std::vector<T> l2{ 1, -1 };
 		std::unordered_map<int, std::vector<std::vector<T>>> cached_transforms;
 
-		// Compute a cached transform if necessary or possible
-		// return 0 if a cached transform exists for N
-		// return 1 if a cached transform was generated
-		// return -1 if a transform does not exist and cannot be generated
+		/* 
+		Compute a cached transform if necessary or possible
+		return 0 if a cached transform exists for N
+		return 1 if a cached transform was generated
+		return -1 if a transform does not exist and cannot be generated
+		*/
 		int generate_transform(int N) {
 			if (this->cached_transforms.count(N) > 0) {
 				return 0;
@@ -303,7 +325,9 @@ namespace filtd {
 				this->generate_transform(list_of_Ns[i]);
 			}
 		}
-		// convert an analog filter to a digital filter
+		/*
+		convert an analog filter to a digital filter
+		*/
 		filtab<T> bilin(const filtab<T>& analog, T fs) {
 			filtab<T> digital;
 			return this->bilin(analog, digital, fs);
@@ -326,12 +350,14 @@ namespace filtd {
 			return digital;
 		}
 	};
-	// A class that has a member function transforms lowpass analog prototypes with wo of 1 rad/s to bandpass filters
-	// This class caches data from previous transforms to make repeated transforms of the same order more efficient. 
-	// The transform cache is based on the order of the analog prototype, not the bandpass filter.
-	// This means that a cached transform for N = 2 results in a BPF of N = 4;
-	// A max number of cached transforms can be set and if that number is reached the cache is erased. 
-	// A better system should be implemented but this should prevent memory leaks.
+	/* 
+	A class that has a member function transforms lowpass analog prototypes with wo of 1 rad / s to bandpass filters
+	This class caches data from previous transforms to make repeated transforms of the same order more efficient. 
+	The transform cache is based on the order of the analog prototype, not the bandpass filter.
+	This means that a cached transform for N = 2 results in a BPF of N = 4;
+	A max number of cached transforms can be set and if that number is reached the cache is erased. 
+	A better system should be implemented but this should prevent memory leaks.
+	*/
 	template <typename T>
 	class FastBPF {
 	private:
@@ -341,10 +367,12 @@ namespace filtd {
 		int no_of_cached_transforms = 0;
 		const int max_no_of_cached_transforms = 10;
 
-		// Compute a cached transform if necessary or possible
-		// return 0 if a cached transform exists for N
-		// return 1 if a cached transform was generated
-		// return -1 if a transform does not exist and cannot be generated
+		/* 
+		Compute a cached transform if necessary or possible.
+		return 0 if a cached transform exists for N.
+		return 1 if a cached transform was generated.
+		return -1 if a transform does not exist and cannot be generated .
+		*/
 		int generate_transform(int N) {
 			if (this->cached_transforms.count(N) > 0) {
 				return 0;
@@ -376,14 +404,18 @@ namespace filtd {
 		int get_no_cached_transforms() {
 			return no_of_cached_transforms;
 		}
-		// note transforms are generated according to the N of the prototype filter
-		// i.e. a prototype with N = 2 gives a bandpass filter with N = 4
+		/* 
+		note transforms are generated according to the N of the prototype filter
+		i.e. a prototype with N = 2 gives a bandpass filter with N = 4 
+		*/
 		void generate_transforms(std::vector<int> list_of_Ns) {
 			for (auto i = 0; i < list_of_Ns.size(); i++) {
 				this->generate_transform(list_of_Ns[i]);
 			}
 		}
-		// convert an analog filter to a digital filter
+		/*
+		convert an analog filter to a digital filter
+		*/
 		filtab<T> lp2bp(const filtab<T>& lpap, T wo, T Q) {
 			filtab<T> bp;
 			return this->lp2bp(lpap, bp, wo, Q);
