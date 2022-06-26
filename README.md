@@ -1,4 +1,5 @@
 # cpp-ap-filter-tools
+- a C++ template library that includes tools that allow for transformations of lowpass analog prototypes to create other lowpass, highpass, and bandpass filters; also include a bilinear transform!
 - Created by and copywrited by me
 - This code is made availiable under the GPLv3 license here: www.gnu.org/licenses/gpl-3.0.en.html
 ## Warning, not fully tested, use at your own risk
