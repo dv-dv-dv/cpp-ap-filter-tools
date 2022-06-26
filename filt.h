@@ -212,18 +212,20 @@ namespace filt {
 		return hp;
 	}
 	/* 
-	transforms an analog lpf with a cutoff of 1 rad/s to a bpf with a geometric center of wo rad/s and quality factor Q
+	transforms an analog lpf with a cutoff of 1 rad/s to a bpf with a lower cutoff of wl and an upper cutoff of wu
 	*/
 	template <typename T>
-	filtab<T> lp2bp(const filtab<T>& lpap, T wo, T Q) {
+	filtab<T> lp2bp(const filtab<T>& lpap, T wl, T wu) {
 		filtab<T> bp;
-		return lp2bp(lpap, bp, wo, Q);
+		return lp2bp(lpap, bp, wl, wu);
 	}
 	template <typename T>
-	filtab<T>& lp2bp(const filtab<T>& lpap, filtab<T>& bp, T wo, T Q) {
+	filtab<T>& lp2bp(const filtab<T>& lpap, filtab<T>& bp, T wl, T wu) {
+		T wo = sqrt(wu * wl);
+		T Q = wo / (wu - wl);
 		int N = lpap.getN();
 		bp.resize(2 * N);
-		std::vector<T> l1{ (T)wo, 0 }, l2{ (T)Q, 0, (T)(Q * wo * wo) }, part;
+		std::vector<T> l1{ (T)wo, 0 }, l2{ Q, 0, (Q * wo * wo) }, part;
 		for (auto i = 0; i < N + 1; i++) {
 			part = pad_vec(poly_mult(poly_exp(l1, i), poly_exp(l2, N - i)), 2 * N + 1);
 			for (auto j = 0; j < 2 * N + 1; j++) {
@@ -416,12 +418,14 @@ namespace filt {
 		/*
 		convert an analog filter to a digital filter
 		*/
-		filtab<T> lp2bp(const filtab<T>& lpap, T wo, T Q) {
+		filtab<T> lp2bp(const filtab<T>& lpap, T wl , T wu) {
 			filtab<T> bp;
-			return this->lp2bp(lpap, bp, wo, Q);
+			return this->lp2bp(lpap, bp, wl, wu);
 		}
-		filtab<T>& lp2bp(const filtab<T>& lpap, filtab<T>& bp, T wo, T Q) {
+		filtab<T>& lp2bp(const filtab<T>& lpap, filtab<T>& bp, T wl, T wu) {
 			using namespace std;
+			T wo = sqrt(wu * wl);
+			T Q = wo / (wu - wl);
 			int N = lpap.getN();
 			bp.resize(2 * N);
 			this->generate_transform(N);
