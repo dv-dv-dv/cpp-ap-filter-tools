@@ -10,13 +10,13 @@
 - lp2bp - lowpass to bandpass
 - bt_freq_warp - warp a frequency for bilinear transforms
 - bilin - bilinear transform
+- bilin1 - bilinear transform of a 1st order analog filter
+- bilin2 - bilinear transform of a 2nd order analog filter
 ## List of classes
 - filtab
 	- container class with two vectors a and b
 - FastBilin
 	- a class that caches results from previous bilinear transforms to make repeat transforms faster
-- FastBPF
-	- a class that caches results from previous lp2bp transforms to make repeat transforms faster
 ## General Notes
 ### analog filters are in the form
 		b[0]s^N + b[0]s^(N - 1) + ... + b[N - 1]s + b[N]
@@ -41,11 +41,8 @@
 	- Because memory is allocated this version is slower than the previous
 ### The functions lp2hp, lp2bp, and bilin do not support inplace transformations, however lp2lp does
 ### lp2lp works as a general frequency scaler
-### FastBilin and FastBPF are fast
-- The bilin and lp2bpf located in these classes are about 9-10x faster than the ones located outside of their classes for repeat transforms of the same N
-- These classes are fast because they cache results of previous transforms
-- By default, the cache will erase once more than 10 transforms are stored
-	- This is to prevent memory leaks, but there is certainly a better way to do this
+### FastBilin is fast
+- if you are doing multiple transforms of the same order, consider using FastBilin as it is around 4-5x than bilin
 ### The poly_exp function is very bad
 - There are probably some very fast algorithms to calculate a polynomial raised to a power, but with the FastBilin and FastBPF classes there is little motivation to implement a faster algorithm
 ### These functions have not been properly tested yet, but I think they might work
