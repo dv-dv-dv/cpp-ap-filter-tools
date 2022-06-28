@@ -3,6 +3,20 @@
 #include <unordered_map>
 #include <ctgmath>
 namespace filt {
+	template <typename T> 
+	T choose(T n, T k) {
+		T a1 = 1, a2 = 1, a3 = 1;
+		for (auto i = 2; i <= n; i++) {
+			a1 *= i;
+			if (i <= k) {
+				a2 *= i;
+			}
+			if (i <= n - k) {
+				a3 *= i;
+			}
+		}
+		return a1 / (a2 * a3);
+	}
 	// multiply two polynomials
 	template <typename T>
 	std::vector<T> poly_mult(const std::vector<T>& poly1, const std::vector<T>& poly2) {
@@ -175,13 +189,22 @@ namespace filt {
 		T wo = sqrt(wu * wl);
 		T Q = wo / (wu - wl);
 		int N = lpap.getN();
+		T k = 0, k1, k2;
 		bp.resize(2 * N);
-		std::vector<T> l1{ (T)wo, 0 }, l2{ Q, 0, (Q * wo * wo) }, part;
 		for (auto i = 0; i < N + 1; i++) {
-			part = pad_vec(poly_mult(poly_exp(l1, i), poly_exp(l2, N - i)), 2 * N + 1);
-			for (auto j = 0; j < 2 * N + 1; j++) {
-				bp.a[j] += lpap.a[i] * part[j];
-				bp.b[j] += lpap.b[i] * part[j];
+			for (auto j = 0; j < i + 1; j++) {
+				if ((i + j) % 2 == 0) {
+					k = choose<T>(N - j, (i - j) / 2);
+					k1 = pow(Q, -j);
+					k2 = pow(wo, i);
+					bp.a[i] += lpap.a[j] * k * k1 * k2;
+					bp.b[i] += lpap.b[j] * k * k1 * k2;
+					if (i != 2 * N - i){
+						k2 = pow(wo, (2 * N - i));
+						bp.a[2 * N - i] += lpap.a[j] * k * k1 * k2;
+						bp.b[2 * N - i] += lpap.b[j] * k * k1 * k2;
+					}
+				}
 			}
 		}
 		bp.normalize();
@@ -205,20 +228,76 @@ namespace filt {
 	}
 	template <typename T>
 	filtab<T>& bilin(const filtab<T>& analog, filtab<T>& digital, T fs) {
-		int N = analog.getN();
+		using namespace std;
+		int N = analog.getN(), dim = N + 1, r1 = 0, r2 = 0, sign = 1;
+		//test.assign((N + 1) * 2, 1);
+		vector<T> test(2 * (N + 1), 1);
 		digital.resize(N);
-		T k1 = 2 * fs, k2 = 0;
-		std::vector<T> l1{ 1, 1 }, l2{ 1, -1 }, part;
-		for (auto i = 0; i < N + 1; i++) {
-			part = poly_mult(poly_exp(l1, i), poly_exp(l2, N - i));
-			k2 = pow(k1, -i);
-			for (auto j = 0; j < N + 1; j++) {
-				digital.a[j] += k2 * analog.a[i] * part[j];
-				digital.b[j] += k2 * analog.b[i] * part[j];
+		T k = 2 * fs, k2 = 0;
+		for (auto i = 0; i < dim; i++) {
+			k2 = pow(k, -i);
+			digital.a[0] += k2 * analog.a[i];
+			digital.b[0] += k2 * analog.b[i];
+		}
+		for (auto i = 1; i < dim; i++) {
+			r1 = i % 2;
+			r2 = (i + 1) % 2;
+			sign *= -1;
+			test[r1 * dim] = choose(N, i) * sign;
+			digital.a[i] += analog.a[0] * test[r1 * dim];
+			digital.b[i] += analog.b[0] * test[r1 * dim];
+			for (auto j = 1; j < dim; j++) {
+				test[r1 * dim + j] = test[r1 * dim + j - 1] + test[r2 * dim + j - 1] + test[r2 * dim + j];
+				k2 = pow(k, -j);
+				digital.a[i] += k2 * analog.a[j] * test[r1 * dim + j];
+				digital.b[i] += k2 * analog.b[j] * test[r1 * dim + j];
 			}
 		}
 		digital.normalize();
 		return digital;
+	}
+	/*
+	bilinear transform specialization for filter order of 1
+	*/
+	template <typename T>
+	filtab<T> bilin1(const filtab<T>& analog1, T fs) {
+		filtab<T> digital1;
+		return bilin1(analog1, digital1, fs);
+	}
+	template <typename T>
+	filtab<T>& bilin1(const filtab<T>& analog1, filtab<T>& digital1, T fs) {
+		digital1.resize(1);
+		T k = 2 * fs;
+		digital1.a[0] = analog1.a[0] * k + analog1.a[1];
+		digital1.a[1] = -analog1.a[0] * k + analog1.a[1];
+
+		digital1.b[0] = analog1.b[0] * k + analog1.b[1];
+		digital1.b[1] = -analog1.b[0] * k + analog1.b[1];
+		digital1.normalize();
+		return digital1;
+	}
+	/*
+	bilinear transform specialization for filter order of 2
+	*/
+	template <typename T>
+	filtab<T> bilin2(const filtab<T>& analog2, T fs) {
+		filtab<T> digital2;
+		return bilin2(analog2, digital2, fs);
+	}
+	template <typename T>
+	filtab<T>& bilin2(const filtab<T>& analog2, filtab<T>& digital2, T fs) {
+		digital2.resize(2);
+		T k = 2 * fs; T k2 = k * k;
+		digital2.a[0] = analog2.a[0] * k2 + analog2.a[1] * k + analog2.a[2];
+		digital2.a[1] = -2 * analog2.a[0] * k2 + 2 * analog2.a[2];
+		digital2.a[2] = analog2.a[0] * k2 - analog2.a[1] * k + analog2.a[2];
+
+		digital2.b[0] = analog2.b[0] * k2 + analog2.b[1] * k + analog2.b[2];
+		digital2.b[1] = -2 * analog2.b[0] * k2 + 2 * analog2.b[2];
+		digital2.b[2] = analog2.b[0] * k2 - analog2.b[1] * k + analog2.b[2];
+
+		digital2.normalize();
+		return digital2;
 	}
 	
 	/* 
@@ -301,98 +380,6 @@ namespace filt {
 			}
 			digital.normalize();
 			return digital;
-		}
-	};
-	/* 
-	A class that has a member function transforms lowpass analog prototypes with wo of 1 rad / s to bandpass filters
-	This class caches data from previous transforms to make repeated transforms of the same order more efficient. 
-	The transform cache is based on the order of the analog prototype, not the bandpass filter.
-	This means that a cached transform for N = 2 results in a BPF of N = 4;
-	A max number of cached transforms can be set and if that number is reached the cache is erased. 
-	A better system should be implemented but this should prevent memory leaks.
-	*/
-	template <typename T>
-	class FastBPF {
-	private:
-		std::vector<T> l1{ 1, 0 };
-		std::vector<T> l2{ 1, 0, 1 };
-		std::unordered_map<int, std::vector<std::vector<T>>> cached_transforms;
-		int no_of_cached_transforms = 0;
-		const int max_no_of_cached_transforms = 10;
-
-		/* 
-		Compute a cached transform if necessary or possible.
-		return 0 if a cached transform exists for N.
-		return 1 if a cached transform was generated.
-		return -1 if a transform does not exist and cannot be generated .
-		*/
-		int generate_transform(int N) {
-			if (this->cached_transforms.count(N) > 0) {
-				return 0;
-			}
-			else if (N <= 0) {
-				return -1;
-			}
-			else {
-				using namespace std;
-				if (this->no_of_cached_transforms == this->max_no_of_cached_transforms) {
-					this->cached_transforms.clear();
-					this->no_of_cached_transforms = 0;
-				}
-				vector<vector<T>>& transform = this->cached_transforms[N];
-				transform.resize(N + 1);
-				for (auto i = 0; i < N + 1; i++) {
-					transform[i] = pad_vec(poly_mult(poly_exp(this->l1, i), poly_exp(this->l2, N - i)), 2 * N + 1);
-				}
-				this->no_of_cached_transforms++;
-				return 1;
-			}
-		}
-	public:
-		FastBPF() {
-		}
-		FastBPF(std::vector<int> list_of_Ns) {
-			generate_transforms(list_of_Ns);
-		}
-		int get_no_cached_transforms() {
-			return no_of_cached_transforms;
-		}
-		/* 
-		note transforms are generated according to the N of the prototype filter
-		i.e. a prototype with N = 2 gives a bandpass filter with N = 4 
-		*/
-		void generate_transforms(std::vector<int> list_of_Ns) {
-			for (auto i = 0; i < list_of_Ns.size(); i++) {
-				this->generate_transform(list_of_Ns[i]);
-			}
-		}
-		/*
-		convert an analog filter to a digital filter
-		*/
-		filtab<T> lp2bp(const filtab<T>& lpap, T wl , T wu) {
-			filtab<T> bp;
-			return this->lp2bp(lpap, bp, wl, wu);
-		}
-		filtab<T>& lp2bp(const filtab<T>& lpap, filtab<T>& bp, T wl, T wu) {
-			using namespace std;
-			T wo = sqrt(wu * wl);
-			T Q = wo / (wu - wl);
-			int N = lpap.getN();
-			bp.resize(2 * N);
-			this->generate_transform(N);
-			vector<vector<T>>& transform = cached_transforms[N];
-			T k1 = 0, k2 = 0;
-			for (auto i = 0; i < N + 1; i++) {
-				k1 = pow(Q, N - i);
-				for (auto j = 0; j < 2 * N + 1; j++) {
-					k2 = pow(wo, i);
-					bp.a[j] += k1 * lpap.a[i] * transform[i][j];
-					bp.b[j] += k1 * lpap.b[i] * transform[i][j];
-				}
-			}
-			lp2lp(bp, bp, wo);
-			bp.normalize();
-			return bp;
 		}
 	};
 }
