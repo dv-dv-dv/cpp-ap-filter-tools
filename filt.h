@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <array>
 #include <unordered_map>
 #include <ctgmath>
 namespace filt {
@@ -334,10 +335,18 @@ namespace filt {
 					this->cached_transforms.clear();
 					this->no_of_cached_transforms = 0;
 				}
-				vector<vector<T>>& transform = this->cached_transforms[N];
-				transform.resize(N + 1);
+				vector<vector<T>>& tr = this->cached_transforms[N];
+				tr.resize(N + 1);
 				for (auto i = 0; i < N + 1; i++) {
-					transform[i] = poly_mult(poly_exp(this->l1, i), poly_exp(this->l2, N - i));
+					tr[i].assign(N + 1, 1);
+				}
+				int sign = 1;
+				for (auto i = 1; i < N + 1; i++) {
+					sign *= -1;
+					tr[0][i] = choose<T>(N, i) * sign;
+					for (auto j = 1; j < N + 1; j++) {
+						tr[j][i] = tr[j - 1][i] + tr[j - 1][i - 1] + tr[j][i - 1];
+					}
 				}
 				this->no_of_cached_transforms++;
 				return 1;
