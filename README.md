@@ -43,7 +43,5 @@
 ### lp2lp works as a general frequency scaler
 ### FastBilin is fast
 - if you are doing multiple transforms of the same order, consider using FastBilin as it is around 4-5x than bilin
-### The poly_exp function is very bad
-- There are probably some very fast algorithms to calculate a polynomial raised to a power, but with the FastBilin and FastBPF classes there is little motivation to implement a faster algorithm
 ### These functions have not been properly tested yet, but I think they might work
 - Use at your own risk
